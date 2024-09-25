@@ -2,7 +2,8 @@
     "name": "UnityConfig",
     "rootNamespace": "",
     "references": [
-        "UnityEGUI"
+        "UnityEGUI",
+        "FirebaseAdapter"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

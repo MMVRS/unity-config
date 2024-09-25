@@ -43,7 +43,7 @@ namespace Build1.UnityConfig.Repositories
                     configSettings.FetchTimeoutInMilliseconds = (ulong)settings.FallbackTimeout;
 
                 if (Debug.isDebugBuild)
-                    configSettings.MinimumFetchInternalInMilliseconds = 0; // Refresh immediately when debugging.
+                    configSettings.MinimumFetchIntervalInMilliseconds = 0; // Refresh immediately when debugging.
 
                 FirebaseRemoteConfig.DefaultInstance
                                     .SetConfigSettingsAsync(configSettings)
