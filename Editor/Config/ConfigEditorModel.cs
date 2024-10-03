@@ -189,7 +189,9 @@ namespace Build1.UnityConfig.Editor.Config
         {
             #if BUILD1_CONFIG_FIREBASE_REMOTE_CONFIG_AVAILABLE
 
-            ConfigRepositoryFirebase.Load(null, configType, onComplete, onError);
+            var clientSettings = ConfigSettings.FromEditorSettings(ConfigProcessor.GetSettings());
+
+            ConfigRepositoryFirebase.Load(clientSettings, configType, onComplete, onError);
                 
             #else
                 
