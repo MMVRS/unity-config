@@ -1,5 +1,7 @@
 using System;
+#if UNITY_EDITOR || !UNITY_WEBGL
 using Firebase;
+#endif
 
 namespace Build1.UnityConfig
 {
@@ -12,15 +14,18 @@ namespace Build1.UnityConfig
             this.error = error;
         }
 
+#if UNITY_EDITOR || !UNITY_WEBGL
         internal static ConfigException FromFirebaseException(Exception exception, string message = null)
         {
             var error = ConfigError.Unknown;
-            
+
             var baseException = exception.GetBaseException();
+
             if (baseException is FirebaseException firebaseException)
                 error = (ConfigError)firebaseException.ErrorCode;
 
             return new ConfigException(error, message, exception);
         }
+#endif
     }
 }
