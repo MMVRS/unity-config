@@ -12,7 +12,9 @@ namespace Build1.UnityConfig
         [JsonProperty("n")] public string Note                { get; private set; }
         [JsonProperty("c")] public string LastChangedBy       { get; private set; }
         [JsonProperty("t")] public long   LastChangeTimestamp { get; private set; }
-        [JsonProperty("d")] public bool   Disabled            { get; private set; }
+        [JsonProperty("b")] public bool   AbTestEnabled       { get; private set; }
+        [JsonProperty("m")] public string AbTestName          { get; private set; }
+        [JsonProperty("g")] public string AbTestGroup         { get; private set; }
 
         [JsonIgnore] public DateTime LastChangeDate { get; private set; }
 

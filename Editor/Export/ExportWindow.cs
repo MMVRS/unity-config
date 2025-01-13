@@ -1,6 +1,7 @@
 #if UNITY_EDITOR
 
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using Build1.UnityConfig.Editor.Config;
 using Build1.UnityConfig.Editor.Json;
@@ -53,6 +54,8 @@ namespace Build1.UnityConfig.Editor.Export
 
         protected override void OnEGUI()
         {
+            var abTestEnabledInOneOfTheSections = _metadata.Values.Any(m => m.AbTestEnabled);
+            
             EGUI.PropertyList<string>(_model, _model.SelectedConfigSections, nameof(_model.SelectedConfigSections))
                 .Title("Sections", EGUI.FontStyle(FontStyle.Bold))
                 .OnItemRender(renderer =>
@@ -60,11 +63,16 @@ namespace Build1.UnityConfig.Editor.Export
                      var metadata = _metadata[renderer.Item];
                      var jsonPropertyName = _jsonPropertyNames[renderer.Item];
 
-                     EGUI.Enabled(metadata is not { Disabled: true }, () =>
+                     var enabled = _model.SelectedConfigIsBaseline || (abTestEnabledInOneOfTheSections && metadata.AbTestEnabled);
+                     EGUI.Enabled(enabled, () =>
                      {
                          EGUI.Horizontally(() =>
                          {
-                             EGUI.Label(renderer.Item, EGUI.Size(80, EGUI.ButtonHeight02));
+                             var item = renderer.Item;
+                             if (metadata.AbTestEnabled)
+                                 item += " ᵃᵇ";
+                             
+                             EGUI.Label(item, EGUI.Size(80, EGUI.ButtonHeight02));
                              EGUI.Label($"[\"{jsonPropertyName}\"]", EGUI.Height(EGUI.ButtonHeight02), EGUI.StretchedWidth(), EGUI.TextAnchor(TextAnchor.MiddleCenter));
                              EGUI.Label(metadata != null ? metadata.Note : string.Empty, EGUI.Size(100, EGUI.ButtonHeight02));
                              EGUI.Label(metadata != null ? metadata.AppVersion : string.Empty, EGUI.Size(50, EGUI.ButtonHeight02), EGUI.TextAnchor(TextAnchor.MiddleCenter));

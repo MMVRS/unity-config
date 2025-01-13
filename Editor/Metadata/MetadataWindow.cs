@@ -59,11 +59,15 @@ namespace Build1.UnityConfig.Editor.Metadata
                 });
             });
 
-            if (_model.Settings.Mode == ConfigMode.Decomposed)
+            EGUI.Space(20);
+
+            EGUI.Label("A/B Testing", EGUI.FontStyle(FontStyle.Bold));
+            EGUI.Property(dto, dto.AbTestEnabled, nameof(dto.AbTestEnabled));
+            EGUI.Enabled(dto.AbTestEnabled, () =>
             {
-                EGUI.Property(dto, dto.Disabled, nameof(dto.Disabled));
-                EGUI.MessageBox("Disabling allows to hide this section from exporting. This is useful for multiple config storing and management.", MessageType.Info);    
-            }
+                EGUI.Property(dto, dto.AbTestName, nameof(dto.AbTestName));
+                EGUI.Property(dto, dto.AbTestGroup, nameof(dto.AbTestGroup));
+            });
         }
 
         /*

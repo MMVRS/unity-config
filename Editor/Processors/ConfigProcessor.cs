@@ -151,11 +151,21 @@ namespace Build1.UnityConfig.Editor.Processors
             var source = settings.Source;
             if (source == configName)
             {
-                File.Delete(resourcesFolderPath + "config.json");
+                var configResourcePath = resourcesFolderPath + "config.json"; 
+                if (File.Exists(configResourcePath))
+                    File.Delete(configResourcePath);
+
+                var configFallbackResourcePath = resourcesFolderPath + "config_fallback.json";
+                if (File.Exists(configFallbackResourcePath))
+                    File.Delete(configFallbackResourcePath);
                 
                 settings.SetSource(ConfigSettings.SourceDefault);
-                TrySaveSettings(settings);
             }
+
+            if (settings.BaselineSource == configName)
+                settings.SetBaselineSource(null);
+            
+            TrySaveSettings(settings);
 
             AssetDatabase.Refresh(ImportAssetOptions.Default);
 

@@ -153,9 +153,22 @@ namespace Build1.UnityConfig.Editor.Config.States
                         throw new ArgumentOutOfRangeException();
                 }
                 
+                EGUI.Space(20);
+                
+                EGUI.Title("A/B Testing", TitleType.H3, EGUI.OffsetX(5));
+                EGUI.Label("A/B tests related settings.");
+
+                var baselineSources = configs.Where(c => c != ConfigSettings.SourceFirebase).ToList();
+                var currentBaselineSourceIndex = baselineSources.IndexOf(model.Settings.BaselineSource);
+                
+                EGUI.DropDown(baselineSources, currentBaselineSourceIndex, EGUI.DropDownHeight01, newIndex =>
+                {
+                    settings.SetBaselineSource(baselineSources[newIndex]);
+                });
+                
                 model.TrySaveSettings();
 
-                EGUI.Space(33);
+                EGUI.Space(30);
 
                 configs = configs.Concat(new[] { "New..." }).ToList();
 
@@ -167,7 +180,7 @@ namespace Build1.UnityConfig.Editor.Config.States
 
                 EGUI.MessageBox("Firebase config can't be edited from Unity Editor but can be used for another config creation.", MessageType.Info);
 
-                EGUI.SelectionGrid(configs, ref _selectedConfigIndex, 220, 3, 10);
+                EGUI.SelectionGrid(configs, ref _selectedConfigIndex, 160, 3, 10);
 
                 if (_selectedConfigIndex == configs.Count - 1)
                 {

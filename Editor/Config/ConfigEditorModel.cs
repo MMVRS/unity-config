@@ -24,6 +24,7 @@ namespace Build1.UnityConfig.Editor.Config
         public ConfigNode SelectedConfig             { get; private set; }
         public bool       SelectedConfigCanBeSaved   => SelectedConfigName != ConfigSettings.SourceFirebase;
         public bool       SelectedConfigCanBeDeleted => SelectedConfigName != ConfigSettings.SourceFirebase;
+        public bool       SelectedConfigIsBaseline   => SelectedConfigName == Settings.BaselineSource;
 
         public List<string> SelectedConfigSections      { get; private set; }
         public ConfigNode   SelectedConfigSection       { get; private set; }
@@ -44,9 +45,9 @@ namespace Build1.UnityConfig.Editor.Config
             ConfigAssetsPostProcessor.onAssetsPostProcessed += () =>
             {
                 if (!InProgress)
-                    Reset();    
+                    Reset();
             };
-            
+
             Reset();
         }
 
@@ -57,7 +58,7 @@ namespace Build1.UnityConfig.Editor.Config
 
             SelectedConfigName = null;
             SelectedConfig = null;
-            
+
             UnityConfig.CurrentEditorConfig = null;
             UnityConfig.CurrentEditorConfigSection = null;
 
@@ -86,13 +87,13 @@ namespace Build1.UnityConfig.Editor.Config
         public void SelectConfig(string configName, Action onComplete = null)
         {
             InProgress = true;
-            
+
             var settings = ConfigSettings.FromEditorSettings(Settings);
 
             LoadConfig(configName, UnityConfig.Instance.ConfigType, settings, config =>
             {
                 UnityConfig.CurrentEditorConfig = config;
-                
+
                 SelectedConfig = config;
                 SelectedConfigName = configName;
 
@@ -103,7 +104,7 @@ namespace Build1.UnityConfig.Editor.Config
                 SelectSection(lastSelectedSectionIndex);
 
                 InProgress = false;
-                
+
                 onComplete?.Invoke();
             }, exception =>
             {
@@ -137,7 +138,7 @@ namespace Build1.UnityConfig.Editor.Config
             }
 
             var settings = ConfigSettings.FromEditorSettings(Settings);
-            
+
             LoadConfig(sourceConfigName, UnityConfig.Instance.ConfigType, settings, config =>
             {
                 var json = config.ToJson(true);
@@ -198,21 +199,20 @@ namespace Build1.UnityConfig.Editor.Config
             #if BUILD1_CONFIG_FIREBASE_REMOTE_CONFIG_AVAILABLE
 
             ConfigRepositoryFirebase.LoadInEditor(settings, configType, onComplete, onError);
-                
+
             #else
-                
             Debug.LogError("Remote Config loading from Firebase is unavailable. Probably you need to add Firebase Remote Config package into the project.");
             onError?.Invoke(new ConfigException(ConfigError.FirebaseRemoteConfigUnavailable));
-                
+
             #endif
         }
 
         private static void LoadLocalConfig(string configName, Action<ConfigNode> onComplete, Action<ConfigException> onError)
         {
             var path = ConfigProcessor.GetEditorConfigFilePath(configName);
-            
+
             string json;
-            
+
             try
             {
                 json = File.ReadAllText(path);
@@ -223,9 +223,9 @@ namespace Build1.UnityConfig.Editor.Config
                 onError?.Invoke(new ConfigException(ConfigError.ResourceNotFound, $"Path: {path}", exception));
                 return;
             }
-            
+
             ConfigNode config;
-            
+
             try
             {
                 config = (ConfigNode)JsonConvert.DeserializeObject(json, UnityConfig.Instance.ConfigType);
@@ -236,7 +236,7 @@ namespace Build1.UnityConfig.Editor.Config
                 onError?.Invoke(new ConfigException(ConfigError.ParsingError, $"JSON: {json}", exception));
                 return;
             }
-            
+
             onComplete?.Invoke(config);
         }
 
@@ -277,15 +277,15 @@ namespace Build1.UnityConfig.Editor.Config
             switch (Settings.Mode)
             {
                 case ConfigMode.Default:
-                    
+
                     config.UpdateMetadata();
 
                     // When saving in default mode we need to get rid of metadatas from all sections.
                     foreach (var section in SelectedConfigSections)
                         GetSection(config, section).ClearMetadata();
-                    
+
                     break;
-                
+
                 case ConfigMode.Decomposed:
                     config.ClearMetadata();
                     SelectedConfigSection.UpdateMetadata();
@@ -293,9 +293,9 @@ namespace Build1.UnityConfig.Editor.Config
                 default:
                     throw new ArgumentOutOfRangeException();
             }
-            
+
             property.SetValue(config, SelectedConfigSection);
-            
+
             ConfigProcessor.OnSaving(config);
 
             SelectedConfigSectionBackup = CloneSection(SelectedConfigSection);
@@ -312,7 +312,7 @@ namespace Build1.UnityConfig.Editor.Config
         public void RevertSection()
         {
             SelectedConfigSection = CloneSection(SelectedConfigSectionBackup);
-            
+
             UnityConfig.CurrentEditorConfigSection = SelectedConfigSection;
 
             OnSectionReverted?.Invoke();
@@ -323,7 +323,7 @@ namespace Build1.UnityConfig.Editor.Config
             return SelectedConfigSection != null &&
                    SelectedConfigSection.ToJson(false) != SelectedConfigSectionBackup.ToJson(false);
         }
-        
+
         public static ConfigNode GetSection(ConfigNode config, string name)
         {
             var type = config.GetType();

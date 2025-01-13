@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.Serialization;
 using Newtonsoft.Json;
 
 namespace Build1.UnityConfig
@@ -40,6 +41,16 @@ namespace Build1.UnityConfig
             if (indented)
                 return JsonConvert.SerializeObject(this, Formatting.Indented, Settings);
             return JsonConvert.SerializeObject(this, Settings);
+        }
+        
+        /*
+         * Private.
+         */
+        
+        [OnDeserialized]
+        private void OnDeserialized(StreamingContext context)
+        {
+            Metadata ??= new ConfigNodeMetadata();
         }
 
         /*

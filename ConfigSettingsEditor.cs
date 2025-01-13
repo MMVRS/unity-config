@@ -15,6 +15,7 @@ namespace Build1.UnityConfig
         [JsonProperty("fallback_timeout")]     public int        FallbackTimeout              { get; private set; }
         [JsonProperty("cache_enabled")]        public bool       CacheEnabled                 { get; private set; }
         [JsonProperty("fast_loading_enabled")] public bool       FastLoadingEnabled           { get; private set; }
+        [JsonProperty("baseline_source")]      public string     BaselineSource               { get; private set; }
 
         [JsonIgnore] public bool IsDirty { get; private set; }
 
@@ -107,7 +108,7 @@ namespace Build1.UnityConfig
             FallbackTimeout = value;
             SetDirty();
         }
-        
+
         public void SetCacheEnabled(bool value)
         {
             if (CacheEnabled == value)
@@ -117,16 +118,25 @@ namespace Build1.UnityConfig
 
             if (!CacheEnabled && FastLoadingEnabled)
                 SetFastLoadingEnabled(false);
-            
+
             SetDirty();
         }
-        
+
         public void SetFastLoadingEnabled(bool value)
         {
             if (FastLoadingEnabled == value)
                 return;
 
             FastLoadingEnabled = value;
+            SetDirty();
+        }
+
+        public void SetBaselineSource(string value)
+        {
+            if (BaselineSource == value)
+                return;
+
+            BaselineSource = value;
             SetDirty();
         }
 
