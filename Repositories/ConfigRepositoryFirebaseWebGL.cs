@@ -5,70 +5,38 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization;
 using System.Text.RegularExpressions;
+using Build1.UnityConfig.Repositories.WebGL;
 using Build1.UnityConfig.Utils;
-using Modules.Firebase.Adapter.Impl;
 using Newtonsoft.Json;
 using UnityEngine;
-using Rc = MarksAssets.FirebaseWebGL.RemoteConfig.RemoteConfig;
-using RemoteConfigSettings = MarksAssets.FirebaseWebGL.RemoteConfig.RemoteConfigSettings;
 
 namespace Build1.UnityConfig.Repositories
 {
-    internal static class ConfigRepositoryFirebaseWebGL
+    internal sealed class ConfigRepositoryFirebaseWebGL
     {
-        private static readonly Regex BooleanTruePattern  = new("^(1|true|t|yes|y|on)$", RegexOptions.IgnoreCase);
-        private static readonly Regex BooleanFalsePattern = new("^(0|false|f|no|n|off|)$", RegexOptions.IgnoreCase);
+        private readonly Regex BooleanTruePattern  = new("^(1|true|t|yes|y|on)$", RegexOptions.IgnoreCase);
+        private readonly Regex BooleanFalsePattern = new("^(0|false|f|no|n|off|)$", RegexOptions.IgnoreCase);
+        private readonly FirebaseWebglPrivateRemoteConfigBridge _remoteConfigBridge = new();
 
-        private static Rc   _remoteConfig;
-        private static bool _fetched;
+        private bool _fetched;
 
-        public static void Load<T>(ConfigSettings settings, Action<T> onComplete, Action<ConfigException> onError) where T : ConfigNode
+        public void Load<T>(ConfigSettings settings, Action<T> onComplete, Action<ConfigException> onError) where T : ConfigNode
         {
-            Initialize(settings, () => { FetchAndActivate(() => { GetJson<T>(settings, value => { onComplete?.Invoke(value); }, onError); }, onError); });
+            LoadInternal(settings, onComplete, onError);
         }
 
-        private static void Initialize(ConfigSettings settings, Action onComplete)
-        {
-            if (!FirebaseWebglAdapter.Initialized)
-            {
-                throw new Exception("FirebaseWebglAdapter isn't initialized.");
-            }
-
-            SetupRemoteConfig(settings, onComplete);
-        }
-
-        private static void SetupRemoteConfig(ConfigSettings settings, Action onComplete)
-        {
-            _remoteConfig = Rc.getRemoteConfig(FirebaseWebglAdapter.App);
-
-            var fallbackTimeout = settings.FallbackEnabled && settings.FallbackTimeout > 0 ? settings.FallbackTimeout : 0;
-
-            var minimumFetchIntervalMillis = Debug.isDebugBuild ? 0 : 300000;
-            var fetchTimeoutMillis = fallbackTimeout > 0 ? fallbackTimeout : 60000;
-
-            _remoteConfig.settings = new RemoteConfigSettings(fetchTimeoutMillis, minimumFetchIntervalMillis);
-
-            onComplete?.Invoke();
-        }
-
-        private static async void FetchAndActivate(Action onComplete, Action<ConfigException> onError)
+        private async void LoadInternal<T>(ConfigSettings settings, Action<T> onComplete, Action<ConfigException> onError) where T : ConfigNode
         {
             try
             {
-                if (_fetched)
-                {
-                    onComplete?.Invoke();
-                    return;
-                }
-
-                var isFetched = await Rc.fetchAndActivate(_remoteConfig);
-
-                if (isFetched)
-                {
-                    _fetched = true;
-                }
-
-                onComplete?.Invoke();
+                await SetupRemoteConfig(settings);
+                await FetchAndActivate();
+                var config = await GetJson<T>(settings);
+                onComplete?.Invoke(config);
+            }
+            catch (ConfigException exception)
+            {
+                onError?.Invoke(exception);
             }
             catch (Exception exception)
             {
@@ -76,32 +44,50 @@ namespace Build1.UnityConfig.Repositories
             }
         }
 
-        private static void GetJson<T>(ConfigSettings settings, Action<T> onComplete, Action<ConfigException> onError)
+        private async System.Threading.Tasks.Task SetupRemoteConfig(ConfigSettings settings)
+        {
+            var fallbackTimeout = settings.FallbackEnabled && settings.FallbackTimeout > 0 ? settings.FallbackTimeout : 0;
+
+            var minimumFetchIntervalMillis = Debug.isDebugBuild ? 0 : 300000;
+            var fetchTimeoutMillis = fallbackTimeout > 0 ? fallbackTimeout : 60000;
+
+            await _remoteConfigBridge.Configure(fetchTimeoutMillis, minimumFetchIntervalMillis);
+        }
+
+        private async System.Threading.Tasks.Task FetchAndActivate()
+        {
+            if (_fetched)
+                return;
+
+            var isFetched = await _remoteConfigBridge.FetchAndActivate();
+
+            if (isFetched)
+                _fetched = true;
+        }
+
+        private async System.Threading.Tasks.Task<T> GetJson<T>(ConfigSettings settings) where T : ConfigNode
         {
             if (settings.Mode == ConfigMode.Decomposed)
             {
-                GetJsonDecomposed(settings, onComplete, onError);
-                return;
+                return await GetJsonDecomposed<T>();
             }
 
             try
             {
-                var value = Rc.getValue(_remoteConfig, settings.ParameterName);
-                var config = JsonConvert.DeserializeObject<T>(value.asString());
-
-                onComplete?.Invoke(config);
+                var json = await _remoteConfigBridge.GetValue(settings.ParameterName);
+                return JsonConvert.DeserializeObject<T>(json);
             }
             catch (Exception error)
             {
-                onError?.Invoke(new ConfigException(ConfigError.ParsingError, "Get Json error", error));
+                throw new ConfigException(ConfigError.ParsingError, "Get Json error", error);
             }
         }
 
-        private static void GetJsonDecomposed<T>(ConfigSettings settings, Action<T> onComplete, Action<ConfigException> onError)
+        private async System.Threading.Tasks.Task<T> GetJsonDecomposed<T>() where T : ConfigNode
         {
             try
             {
-                var defaultConfig = Rc.getAll(_remoteConfig);
+                var defaultConfig = await _remoteConfigBridge.GetAll();
 
                 if (defaultConfig == null)
                 {
@@ -112,7 +98,7 @@ namespace Build1.UnityConfig.Repositories
 
                 foreach (var (key, value) in defaultConfig)
                 {
-                    var stringValue = value.asString();
+                    var stringValue = value;
 
                     if (stringValue.Length >= 24)
                     {
@@ -144,11 +130,11 @@ namespace Build1.UnityConfig.Repositories
                 }
 
                 var instance = ParseDecomposed<T>(parameters);
-                onComplete?.Invoke(instance);
+                return instance;
             }
             catch (Exception ex)
             {
-                onError?.Invoke(new ConfigException(ConfigError.ParsingError, "Json decompose error", ex));
+                throw new ConfigException(ConfigError.ParsingError, "Json decompose error", ex);
             }
         }
 

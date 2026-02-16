@@ -19,6 +19,9 @@ namespace Build1.UnityConfig
         public static bool                      CachedConfigUsed           { get; private set; }
         public static bool                      RemoteVersionLoaded        { get; private set; }
         public static ulong                     RemoteVersionLoadingTimeMs { get; private set; }
+#if UNITY_WEBGL || UNITY_EDITOR
+        private static readonly ConfigRepositoryFirebaseWebGL _configRepositoryFirebaseWebGL = new();
+#endif
 
         public static event Action<ConfigNode> OnLoadedFromRemote;
 
@@ -206,7 +209,7 @@ namespace Build1.UnityConfig
                 var dateStart = DateTime.UtcNow;
 
                 // Loading config in the background and waiting infinitely to save it to cache in the end.
-                ConfigRepositoryFirebaseWebGL.Load<T>(settings, config =>
+                _configRepositoryFirebaseWebGL.Load<T>(settings, config =>
                 {
                     RemoteVersionLoaded = true;
                     RemoteVersionLoadingTimeMs = Convert.ToUInt64((DateTime.UtcNow - dateStart).TotalMilliseconds);
@@ -223,7 +226,7 @@ namespace Build1.UnityConfig
             {
                 var dateStart = DateTime.UtcNow;
 
-                ConfigRepositoryFirebaseWebGL.Load<T>(settings, config =>
+                _configRepositoryFirebaseWebGL.Load<T>(settings, config =>
                 {
                     RemoteVersionLoaded = true;
                     RemoteVersionLoadingTimeMs = Convert.ToUInt64((DateTime.UtcNow - dateStart).TotalMilliseconds);
