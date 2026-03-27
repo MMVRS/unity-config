@@ -17,6 +17,7 @@ namespace Build1.UnityConfig
         public static WebGLJavaScriptBridgeMode WebGLJavaScriptBridgeMode  { get; set; } = WebGLJavaScriptBridgeMode.Namespaced;
         public static bool                      FallbackConfigUsed         { get; private set; }
         public static bool                      CachedConfigUsed           { get; private set; }
+        public static bool                      RemoteVersionLoading       { get; private set; }
         public static bool                      RemoteVersionLoaded        { get; private set; }
         public static ulong                     RemoteVersionLoadingTimeMs { get; private set; }
 #if UNITY_WEBGL || UNITY_EDITOR
@@ -24,6 +25,7 @@ namespace Build1.UnityConfig
 #endif
 
         public static event Action<ConfigNode> OnLoadedFromRemote;
+        public static event Action<ConfigException> OnFailedToLoadFromRemote;
 
         #if UNITY_EDITOR
 
@@ -150,6 +152,8 @@ namespace Build1.UnityConfig
 
         private static void LoadConfigRuntime<T>(bool isSandbox, Action<T> onComplete, Action<ConfigException> onError) where T : ConfigNode
         {
+            ResetLoadState();
+
             var settings = ConfigSettings.Get();
             if (settings.Source != ConfigSettings.SourceFirebase)
             {
@@ -169,7 +173,7 @@ namespace Build1.UnityConfig
 
             void ErrorHandler(ConfigException exception)
             {
-                if (settings.FallbackEnabled && exception.error is ConfigError.NetworkError or ConfigError.ParsingError)
+                if (settings.FallbackEnabled && exception.error is (ConfigError.NetworkError or ConfigError.ParsingError))
                 {
                     FallbackConfigUsed = true;
 
@@ -207,19 +211,24 @@ namespace Build1.UnityConfig
                 LoadFromCacheOrFallback(onComplete, onError);
                 
                 var dateStart = DateTime.UtcNow;
+                RemoteVersionLoading = true;
 
                 // Loading config in the background and waiting infinitely to save it to cache in the end.
                 _configRepositoryFirebaseWebGL.Load<T>(settings, config =>
                 {
+                    FallbackConfigUsed = false;
+                    CachedConfigUsed = false;
+                    RemoteVersionLoading = false;
                     RemoteVersionLoaded = true;
                     RemoteVersionLoadingTimeMs = Convert.ToUInt64((DateTime.UtcNow - dateStart).TotalMilliseconds);
 
                     OnLoadedFromRemote?.Invoke(config);
 
                     ConfigRepositoryLocal.SaveToCache(config);
-                }, _ =>
+                }, exception =>
                 {
-                    // Ignore for now.
+                    RemoteVersionLoading = false;
+                    OnFailedToLoadFromRemote?.Invoke(exception);
                 });
             }
             else
@@ -230,8 +239,6 @@ namespace Build1.UnityConfig
                 {
                     RemoteVersionLoaded = true;
                     RemoteVersionLoadingTimeMs = Convert.ToUInt64((DateTime.UtcNow - dateStart).TotalMilliseconds);
-
-                    OnLoadedFromRemote?.Invoke(config);
                     
                     CompleteHandler(config);
                 }, ErrorHandler);     
@@ -244,19 +251,24 @@ namespace Build1.UnityConfig
                 LoadFromCacheOrFallback(onComplete, onError);
 
                 var dateStart = DateTime.UtcNow;
+                RemoteVersionLoading = true;
 
                 // Loading config in the background and waiting infinitely to save it to cache in the end.
                 ConfigRepositoryFirebase.LoadInRuntime<T>(settings, false, config =>
                 {
+                    FallbackConfigUsed = false;
+                    CachedConfigUsed = false;
+                    RemoteVersionLoading = false;
                     RemoteVersionLoaded = true;
                     RemoteVersionLoadingTimeMs = Convert.ToUInt64((DateTime.UtcNow - dateStart).TotalMilliseconds);
                     
                     OnLoadedFromRemote?.Invoke(config);
 
                     ConfigRepositoryLocal.SaveToCache(config);
-                }, _ =>
+                }, exception =>
                 {
-                    // Ignore for now.
+                    RemoteVersionLoading = false;
+                    OnFailedToLoadFromRemote?.Invoke(exception);
                 });
             }
             else
@@ -267,8 +279,6 @@ namespace Build1.UnityConfig
                 {
                     RemoteVersionLoaded = true;
                     RemoteVersionLoadingTimeMs = Convert.ToUInt64((DateTime.UtcNow - dateStart).TotalMilliseconds);
-                    
-                    OnLoadedFromRemote?.Invoke(config);
 
                     CompleteHandler(config);
                 }, ErrorHandler);
@@ -308,6 +318,15 @@ namespace Build1.UnityConfig
                                                            onError.Invoke(configException);
                                                        }
                                                    });
+        }
+
+        private static void ResetLoadState()
+        {
+            FallbackConfigUsed = false;
+            CachedConfigUsed = false;
+            RemoteVersionLoading = false;
+            RemoteVersionLoaded = false;
+            RemoteVersionLoadingTimeMs = 0;
         }
     }
 }
