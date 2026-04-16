@@ -7,6 +7,7 @@ using Build1.UnityEGUI.Json;
 using Build1.UnityEGUI.Window;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
+using TreeViewState = UnityEditor.IMGUI.Controls.TreeViewState<int>;
 
 namespace Build1.UnityConfig.Editor.Json
 {

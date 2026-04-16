@@ -17,6 +17,7 @@ namespace Build1.UnityConfig.Repositories.WebGL
 
         private delegate void EnsureModulesSuccessCallback(int requestId);
         private delegate void RequestCallback(int requestId, string value);
+        private delegate void NativeCall(RequestCallback onSuccess, RequestCallback onError, int requestId);
 #endif
 
         private readonly object _syncRoot = new object();
@@ -62,16 +63,56 @@ namespace Build1.UnityConfig.Repositories.WebGL
             int requestId);
 #endif
 
-        public async Task Configure(int fetchTimeoutMillis, int minimumFetchIntervalMillis, string appName = null)
+        public Task Configure(int fetchTimeoutMillis, int minimumFetchIntervalMillis, string appName = null)
         {
 #if UNITY_WEBGL && !UNITY_EDITOR
+            return RunRemoteConfigCall(
+                "remoteConfigPrivateConfigure",
+                (onSuccess, onError, requestId) => ConfigureNative(appName, fetchTimeoutMillis, minimumFetchIntervalMillis, onSuccess, onError, requestId));
+#else
+            throw new NotSupportedException("FirebaseWebglPrivateRemoteConfigBridge is WebGL runtime only.");
+#endif
+        }
+
+        public Task<bool> FetchAndActivate(string appName = null)
+        {
+#if UNITY_WEBGL && !UNITY_EDITOR
+            return FetchAndActivateInternal(appName);
+#else
+            throw new NotSupportedException("FirebaseWebglPrivateRemoteConfigBridge is WebGL runtime only.");
+#endif
+        }
+
+        public Task<string> GetValue(string parameterName, string appName = null)
+        {
+#if UNITY_WEBGL && !UNITY_EDITOR
+            return RunRemoteConfigCallWithPayload(
+                "remoteConfigPrivateGetValue",
+                (onSuccess, onError, requestId) => GetValueNative(appName, parameterName, onSuccess, onError, requestId));
+#else
+            throw new NotSupportedException("FirebaseWebglPrivateRemoteConfigBridge is WebGL runtime only.");
+#endif
+        }
+
+        public Task<Dictionary<string, string>> GetAll(string appName = null)
+        {
+#if UNITY_WEBGL && !UNITY_EDITOR
+            return GetAllInternal(appName);
+#else
+            throw new NotSupportedException("FirebaseWebglPrivateRemoteConfigBridge is WebGL runtime only.");
+#endif
+        }
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+        private async Task RunRemoteConfigCall(string requestName, NativeCall nativeCall)
+        {
             await EnsureRemoteConfigModuleLoaded();
 
-            var request = new FirebaseWebglCallbackRequest("remoteConfigPrivateConfigure", RequestTimeoutMs);
+            var request = new FirebaseWebglCallbackRequest(requestName, RequestTimeoutMs);
 
             try
             {
-                ConfigureNative(appName, fetchTimeoutMillis, minimumFetchIntervalMillis, OnRequestSuccess, OnRequestError, request.RequestId);
+                nativeCall(OnRequestSuccess, OnRequestError, request.RequestId);
             }
             catch
             {
@@ -80,45 +121,17 @@ namespace Build1.UnityConfig.Repositories.WebGL
             }
 
             await request.Task;
-#else
-            throw new NotSupportedException("FirebaseWebglPrivateRemoteConfigBridge is WebGL runtime only.");
-#endif
         }
 
-        public async Task<bool> FetchAndActivate(string appName = null)
+        private async Task<string> RunRemoteConfigCallWithPayload(string requestName, NativeCall nativeCall)
         {
-#if UNITY_WEBGL && !UNITY_EDITOR
             await EnsureRemoteConfigModuleLoaded();
 
-            var request = new FirebaseWebglCallbackRequest("remoteConfigPrivateFetchAndActivate", RequestTimeoutMs);
+            var request = new FirebaseWebglCallbackRequest(requestName, RequestTimeoutMs);
 
             try
             {
-                FetchAndActivateNative(appName, OnRequestSuccess, OnRequestError, request.RequestId);
-            }
-            catch
-            {
-                request.Abort();
-                throw;
-            }
-
-            var payload = await request.Task;
-            return string.Equals(payload, "true", StringComparison.Ordinal);
-#else
-            throw new NotSupportedException("FirebaseWebglPrivateRemoteConfigBridge is WebGL runtime only.");
-#endif
-        }
-
-        public async Task<string> GetValue(string parameterName, string appName = null)
-        {
-#if UNITY_WEBGL && !UNITY_EDITOR
-            await EnsureRemoteConfigModuleLoaded();
-
-            var request = new FirebaseWebglCallbackRequest("remoteConfigPrivateGetValue", RequestTimeoutMs);
-
-            try
-            {
-                GetValueNative(appName, parameterName, OnRequestSuccess, OnRequestError, request.RequestId);
+                nativeCall(OnRequestSuccess, OnRequestError, request.RequestId);
             }
             catch
             {
@@ -127,41 +140,29 @@ namespace Build1.UnityConfig.Repositories.WebGL
             }
 
             return await request.Task;
-#else
-            throw new NotSupportedException("FirebaseWebglPrivateRemoteConfigBridge is WebGL runtime only.");
-#endif
         }
 
-        public async Task<Dictionary<string, string>> GetAll(string appName = null)
+        private async Task<bool> FetchAndActivateInternal(string appName)
         {
-#if UNITY_WEBGL && !UNITY_EDITOR
-            await EnsureRemoteConfigModuleLoaded();
+            var payload = await RunRemoteConfigCallWithPayload(
+                "remoteConfigPrivateFetchAndActivate",
+                (onSuccess, onError, requestId) => FetchAndActivateNative(appName, onSuccess, onError, requestId));
+            return string.Equals(payload, "true", StringComparison.Ordinal);
+        }
 
-            var request = new FirebaseWebglCallbackRequest("remoteConfigPrivateGetAll", RequestTimeoutMs);
-
-            try
-            {
-                GetAllNative(appName, OnRequestSuccess, OnRequestError, request.RequestId);
-            }
-            catch
-            {
-                request.Abort();
-                throw;
-            }
-
-            var payload = await request.Task;
+        private async Task<Dictionary<string, string>> GetAllInternal(string appName)
+        {
+            var payload = await RunRemoteConfigCallWithPayload(
+                "remoteConfigPrivateGetAll",
+                (onSuccess, onError, requestId) => GetAllNative(appName, onSuccess, onError, requestId));
 
             if (string.IsNullOrEmpty(payload))
                 return new Dictionary<string, string>();
 
             var values = JsonConvert.DeserializeObject<Dictionary<string, string>>(payload);
             return values ?? new Dictionary<string, string>();
-#else
-            throw new NotSupportedException("FirebaseWebglPrivateRemoteConfigBridge is WebGL runtime only.");
-#endif
         }
 
-#if UNITY_WEBGL && !UNITY_EDITOR
         private Task EnsureRemoteConfigModuleLoaded()
         {
             lock (_syncRoot)
