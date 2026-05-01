@@ -7,6 +7,12 @@ namespace Build1.UnityConfig.Repositories
 {
     internal static class ConfigRepositoryLocal
     {
+        internal static ulong GetCacheSizeBytes()
+        {
+            var path = GetCachePath();
+            return File.Exists(path) ? (ulong)new FileInfo(path).Length : 0;
+        }
+
         internal static void LoadFromResources<T>(string fileName, Action<T> onComplete, Action<ConfigException> onError) where T : ConfigNode
         {
             string json;
@@ -39,8 +45,7 @@ namespace Build1.UnityConfig.Repositories
 
         internal static void LoadFromCache<T>(Action<T> onComplete, Action<ConfigException> onError) where T : ConfigNode
         {
-            // Version in the file name must prevent issues while updating the app. 
-            var path = $"{Application.persistentDataPath}/config_backup_{Application.version}.json";
+            var path = GetCachePath();
             
             string json;
             
@@ -75,8 +80,7 @@ namespace Build1.UnityConfig.Repositories
         {
             try
             {
-                // Version in the file name must prevent issues while updating the app.
-                var path = $"{Application.persistentDataPath}/config_backup_{Application.version}.json";
+                var path = GetCachePath();
                 var json = config.ToJson(false);
             
                 File.WriteAllText(path, json);
@@ -85,6 +89,19 @@ namespace Build1.UnityConfig.Repositories
             {
                 Debug.LogException(exception);
             }
+        }
+
+        internal static void CleanCache()
+        {
+            var path = GetCachePath();
+            if (File.Exists(path))
+                File.Delete(path);
+        }
+
+        private static string GetCachePath()
+        {
+            // Version in the file name prevents issues while updating the app.
+            return $"{Application.persistentDataPath}/config_backup_{Application.version}.json";
         }
     }
 }

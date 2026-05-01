@@ -27,6 +27,16 @@ namespace Build1.UnityConfig
         public static event Action<ConfigNode> OnLoadedFromRemote;
         public static event Action<ConfigException> OnFailedToLoadFromRemote;
 
+        public static ulong GetCacheSizeBytes()
+        {
+            return ConfigRepositoryLocal.GetCacheSizeBytes();
+        }
+
+        public static void CleanCache()
+        {
+            ConfigRepositoryLocal.CleanCache();
+        }
+
         #if UNITY_EDITOR
 
         internal static UnityConfig Instance                   { get; private set; }
