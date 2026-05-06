@@ -40,8 +40,23 @@ namespace Build1.UnityConfig.Repositories
             }
             catch (Exception exception)
             {
-                onError?.Invoke(new ConfigException(ConfigError.Unknown, "Unknown", exception));
+                onError?.Invoke(CreateConfigException(exception));
             }
+        }
+
+        private static ConfigException CreateConfigException(Exception exception)
+        {
+            if (IsRemoteConfigFetchTimeout(exception))
+                return new ConfigException(ConfigError.NetworkError, "Remote Config fetch timed out.", exception);
+
+            return new ConfigException(ConfigError.Unknown, "Unknown", exception);
+        }
+
+        private static bool IsRemoteConfigFetchTimeout(Exception exception)
+        {
+            var message = exception.GetBaseException().Message;
+            return message.IndexOf("remoteconfig/fetch-timeout", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                   message.IndexOf("config fetch request timed out", StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         private async System.Threading.Tasks.Task SetupRemoteConfig(ConfigSettings settings)
