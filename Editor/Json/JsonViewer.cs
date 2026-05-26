@@ -1,9 +1,7 @@
 #if UNITY_EDITOR
 
-using System;
 using Build1.UnityEGUI;
 using Build1.UnityEGUI.Components.Title;
-using Build1.UnityEGUI.Json;
 using Build1.UnityEGUI.Window;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
@@ -32,7 +30,7 @@ namespace Build1.UnityConfig.Editor.Json
         private string _json;
 
         [SerializeField] private TreeViewState _jsonTreeViewState;
-        [NonSerialized]  private JsonTreeView  _jsonTree;
+        // [NonSerialized]  private JsonTreeView  _jsonTree;
 
         /*
          * Public.
@@ -57,7 +55,7 @@ namespace Build1.UnityConfig.Editor.Json
         protected override void OnInitialize()
         {
             _jsonTreeViewState ??= new TreeViewState();
-            _jsonTree ??= new JsonTreeView(_json, _jsonTreeViewState);
+            // _jsonTree ??= new JsonTreeView(_json, _jsonTreeViewState);
         }
 
         protected override void OnFocusLost()
@@ -91,25 +89,25 @@ namespace Build1.UnityConfig.Editor.Json
 
             EGUI.Space(3);
 
-            var jsonRect = EGUI.GetLastRect();
+            // var jsonRect = EGUI.GetLastRect();
 
             EGUI.TextArea(_json, 150);
             EGUI.Space(1);
             EGUI.Horizontally(() =>
             {
-                EGUI.Button("Expand All", EGUI.Size(120, EGUI.ButtonHeight01)).OnClick(_jsonTree.ExpandAll);
-                EGUI.Button("Collapse All", EGUI.Size(120, EGUI.ButtonHeight01)).OnClick(_jsonTree.CollapseAll);
+                // EGUI.Button("Expand All", EGUI.Size(120, EGUI.ButtonHeight01)).OnClick(_jsonTree.ExpandAll);
+                // EGUI.Button("Collapse All", EGUI.Size(120, EGUI.ButtonHeight01)).OnClick(_jsonTree.CollapseAll);
                 EGUI.Space();
                 EGUI.Button("Copy to Clipboard", EGUI.Size(200, EGUI.ButtonHeight01)).OnClick(EGUI.CopyToClipboard, _json);
                 EGUI.Button("Close", EGUI.Size(100, EGUI.ButtonHeight01)).OnClick(Close);
             });
 
-            const int x = 0;
-            var y = titleRect.y + titleRect.height;
-            var width = position.width - Padding * 2 - x;
-            var height = jsonRect.y - titleRect.y - titleRect.height - Padding * 2;
+            // const int x = 0;
+            // var y = titleRect.y + titleRect.height;
+            // var width = position.width - Padding * 2 - x;
+            // var height = jsonRect.y - titleRect.y - titleRect.height - Padding * 2;
 
-            _jsonTree.OnEGUI(x, y, width, height);
+            // _jsonTree.OnEGUI(x, y, width, height);
         }
 
         /*
