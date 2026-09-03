@@ -15,7 +15,7 @@ namespace Build1.UnityConfig
             DefaultValueHandling = DefaultValueHandling.Ignore
         };
 
-        [JsonProperty("_m")] public ConfigNodeMetadata Metadata { get; private set; }
+        [JsonProperty("_m")] internal ConfigNodeMetadata Metadata { get; private set; }
 
         internal void UpdateMetadata()
         {
@@ -28,6 +28,11 @@ namespace Build1.UnityConfig
             Metadata = null;
         }
 
+        public ConfigNodeMetadata GetMetadata()
+        {
+            return Metadata ?? new ConfigNodeMetadata();
+        }
+        
         public IEnumerable<ConfigNodeInfo> GetNodesInfo()
         {
             var properties = GetType()
