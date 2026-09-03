@@ -32,7 +32,7 @@ namespace Build1.UnityConfig
         {
             return Metadata ?? new ConfigNodeMetadata();
         }
-        
+
         public IEnumerable<ConfigNodeInfo> GetNodesInfo()
         {
             var properties = GetType()
