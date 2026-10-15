@@ -46,6 +46,9 @@ namespace Build1.UnityConfig.Repositories
 
         private static ConfigException CreateConfigException(Exception exception)
         {
+            if (exception.GetBaseException().Message.IndexOf("remoteconfig/fetch-client-network", StringComparison.OrdinalIgnoreCase) >= 0)
+                return new ConfigException(ConfigError.NetworkError, "Remote Config fetch failed to connect to the network.", exception);
+
             if (IsRemoteConfigFetchTimeout(exception))
                 return new ConfigException(ConfigError.NetworkError, "Remote Config fetch timed out.", exception);
 
